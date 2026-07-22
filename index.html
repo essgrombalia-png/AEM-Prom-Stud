@@ -9926,29 +9926,6 @@
   var NUM_BARS = 10;
   var svgWidth = 56;
   var svgHeight = 20;
-  var audioCtx = null;
-  var analyser = null;
-  var dataArray = null;
-
-  function initAudioContext() {
-    if (audioCtx) return;
-    try {
-      var AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioContextClass) {
-        audioCtx = new AudioContextClass();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64;
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-        try {
-          var source = audioCtx.createMediaElementSource(radioPlayer);
-          source.connect(analyser);
-          analyser.connect(audioCtx.destination);
-        } catch(e) {
-          // Dynamic stream frequency synthesizer fallback for CORS streams
-        }
-      }
-    } catch(e) {}
-  }
 
   function initD3Visualizer() {
     var container = d3.select('#radioVisualizer');
@@ -9979,37 +9956,20 @@
 
     function getFrequencies() {
       var freqs = new Array(NUM_BARS).fill(2);
-      var isPlaying = !radioPlayer.paused && radioPlayer.readyState > 0;
+      var isPlaying = !radioPlayer.paused;
       var vol = parseFloat(radioVolume.value) || 0.5;
 
       if (!isPlaying || vol === 0) {
         return freqs;
       }
 
-      var hasRealData = false;
-      if (analyser && dataArray) {
-        analyser.getByteFrequencyData(dataArray);
-        var sum = 0;
-        for (var i = 0; i < dataArray.length; i++) sum += dataArray[i];
-        if (sum > 0) {
-          hasRealData = true;
-          var step = Math.floor(dataArray.length / NUM_BARS);
-          for (var b = 0; b < NUM_BARS; b++) {
-            var val = dataArray[b * step] || 0;
-            freqs[b] = Math.max(2, (val / 255) * (svgHeight - 2) * vol + 2);
-          }
-        }
-      }
-
-      if (!hasRealData) {
-        var t = Date.now() * 0.006;
-        for (var b = 0; b < NUM_BARS; b++) {
-          var s1 = Math.sin(t * 1.8 + b * 0.9);
-          var s2 = Math.cos(t * 2.7 + b * 1.4);
-          var s3 = Math.sin(t * 0.9 + b * 2.2);
-          var wave = (s1 + s2 + s3 + 3) / 6;
-          freqs[b] = Math.max(2, wave * (svgHeight - 3) * vol + 2);
-        }
+      var t = Date.now() * 0.006;
+      for (var b = 0; b < NUM_BARS; b++) {
+        var s1 = Math.sin(t * 1.8 + b * 0.9);
+        var s2 = Math.cos(t * 2.7 + b * 1.4);
+        var s3 = Math.sin(t * 0.9 + b * 2.2);
+        var wave = (s1 + s2 + s3 + 3) / 6;
+        freqs[b] = Math.max(2, wave * (svgHeight - 3) * vol + 2);
       }
 
       return freqs;
@@ -10017,7 +9977,7 @@
 
     function updateVisualizer() {
       var data = getFrequencies();
-      var isPlaying = !radioPlayer.paused && radioPlayer.readyState > 0;
+      var isPlaying = !radioPlayer.paused;
 
       bars.data(data)
         .attr('y', function(d) { return svgHeight - d; })
@@ -10048,11 +10008,13 @@
   }
 
   function updateRadioSource() {
-    var isPlaying = !radioPlayer.paused && radioPlayer.readyState > 0;
+    var wasPlaying = !radioPlayer.paused;
     radioPlayer.src = radioStationSelect.value;
     updateRadioGenreBadge();
-    if (isPlaying) {
-      radioPlayer.play();
+    if (wasPlaying) {
+      radioPlayer.play().catch(function(e) {
+        console.error('Radio station play error:', e);
+      });
     }
   }
 
@@ -10088,35 +10050,46 @@
 
   radioPlayBtn.addEventListener('click', function() {
     if (radioPlayer.paused) {
-      if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      } else {
-        initAudioContext();
-      }
       if (!radioPlayer.src || radioPlayer.src === window.location.href) {
         radioPlayer.src = radioStationSelect.value;
       }
       if (radioMarqueeText) {
         radioMarqueeText.textContent = "Lyssnar på " + radioStationSelect.options[radioStationSelect.selectedIndex].text + " ...";
       }
-      radioPlayer.play().then(function() {
-        radioPlayBtn.innerHTML = pauseIcon;
-        radioStatus.textContent = 'Spelar';
-        radioStatus.classList.add('playing');
-        if (radioMarqueeContainer) radioMarqueeContainer.style.display = 'block';
-      }).catch(function(e) {
+      radioStatus.textContent = 'Laddar...';
+      radioPlayer.play().catch(function(e) {
         radioStatus.textContent = 'Fel vid uppspelning';
-        console.error(e);
+        console.error('Radio play error:', e);
         if (radioMarqueeContainer) radioMarqueeContainer.style.display = 'none';
       });
-      radioStatus.textContent = 'Laddar...';
     } else {
       radioPlayer.pause();
-      radioPlayBtn.innerHTML = playIcon;
-      radioStatus.textContent = 'Pausad';
-      radioStatus.classList.remove('playing');
-      if (radioMarqueeContainer) radioMarqueeContainer.style.display = 'none';
     }
+  });
+
+  radioPlayer.addEventListener('playing', function() {
+    radioPlayBtn.innerHTML = pauseIcon;
+    radioStatus.textContent = 'Spelar';
+    radioStatus.classList.add('playing');
+    if (radioMarqueeContainer) radioMarqueeContainer.style.display = 'block';
+  });
+
+  radioPlayer.addEventListener('pause', function() {
+    radioPlayBtn.innerHTML = playIcon;
+    radioStatus.textContent = 'Pausad';
+    radioStatus.classList.remove('playing');
+    if (radioMarqueeContainer) radioMarqueeContainer.style.display = 'none';
+  });
+
+  radioPlayer.addEventListener('waiting', function() {
+    radioStatus.textContent = 'Laddar...';
+  });
+
+  radioPlayer.addEventListener('error', function() {
+    radioStatus.textContent = 'Fel vid uppspelning';
+    radioPlayBtn.innerHTML = playIcon;
+    radioStatus.classList.remove('playing');
+    if (radioMarqueeContainer) radioMarqueeContainer.style.display = 'none';
   });
 
   radioVolume.addEventListener('input', function() {

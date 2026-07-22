@@ -1324,14 +1324,69 @@
     transition: all 0.6s ease;
   }
 
-  /* Sunlight Golden Aura Pulse FX */
+  /* Sunlight Golden Aura Pulse FX & Dynamic Wind Streaks */
+  .weather-container.fx-clear {
+    --temp-hue-shift: 0deg;
+    filter: hue-rotate(var(--temp-hue-shift, 0deg));
+    transition: filter 0.8s ease;
+  }
   .weather-container.fx-clear .weather-fx-overlay {
-    background: radial-gradient(circle at 20% 25%, rgba(232, 200, 114, 0.16) 0%, rgba(201, 162, 75, 0.04) 50%, transparent 80%);
-    animation: sunPulse 5s ease-in-out infinite alternate;
+    --fx-opacity: 1;
+    --fx-speed: 1;
+    opacity: var(--fx-opacity, 1);
+    background:
+      radial-gradient(circle at 20% 25%, rgba(232, 200, 114, 0.18) 0%, rgba(201, 162, 75, 0.04) 50%, transparent 80%),
+      repeating-linear-gradient(
+        125deg,
+        transparent,
+        transparent 60px,
+        rgba(232, 200, 114, 0.05) 70px,
+        transparent 80px
+      );
+    background-size: 100% 100%, 200% 200%;
+    animation: sunPulse calc(5s / var(--fx-speed, 1)) ease-in-out infinite alternate, windStreak calc(12s / var(--fx-speed, 1)) linear infinite;
+  }
+  .weather-container.fx-clear .weather-fx-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: var(--fx-opacity, 1);
+    background-image: 
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='%23e8c872' opacity='0.35'%3E%3Cpath d='M17 8C8 10 5 16 3 21c5-2 11-5 13-14z'/%3E%3Cpath d='M3 21c3-4 7-7 14-13' stroke='%23c9a24b' stroke-width='1' fill='none'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23c9a24b' opacity='0.25'%3E%3Cpath d='M17 8C8 10 5 16 3 21c5-2 11-5 13-14z'/%3E%3C/svg%3E");
+    background-position: 10% -20px, 60% -20px;
+    background-repeat: repeat;
+    background-size: 220px 220px, 160px 160px;
+    animation: floatingLeaves calc(15s / var(--fx-speed, 1)) ease-in-out infinite;
+    pointer-events: none;
+    border-radius: 16px;
   }
   @keyframes sunPulse {
     0% { opacity: 0.4; transform: scale(0.98); }
     100% { opacity: 1; transform: scale(1.04); }
+  }
+  @keyframes windStreak {
+    0% { background-position: 0 0, 0 0; }
+    100% { background-position: 0 0, 100% 100%; }
+  }
+  @keyframes floatingLeaves {
+    0% {
+      background-position: 0px 0px, 0px 0px;
+      opacity: 0.2;
+    }
+    25% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 0.85;
+    }
+    75% {
+      opacity: 0.6;
+    }
+    100% {
+      background-position: 220px 300px, -160px 240px;
+      opacity: 0.2;
+    }
   }
 
   /* Rain Streak Animation FX */
@@ -1420,14 +1475,24 @@
   }
 
   .weather-primary-card {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.1));
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)) padding-box,
+                linear-gradient(135deg, rgba(232, 200, 114, 0.35), rgba(201, 162, 75, 0.15), rgba(255, 255, 255, 0.08)) border-box;
+    border: 1px solid transparent;
     border-radius: 14px;
     padding: 24px;
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
+  }
+  .weather-primary-card:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)) padding-box,
+                linear-gradient(135deg, rgba(232, 200, 114, 0.6), rgba(201, 162, 75, 0.3), rgba(255, 255, 255, 0.18)) border-box;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3), 0 0 16px rgba(232, 200, 114, 0.18);
+    transform: translateY(-2px);
   }
   .weather-city-name {
     font-family: var(--serif, 'Cinzel', serif);
@@ -1456,6 +1521,54 @@
     width: 64px;
     height: 64px;
     filter: drop-shadow(0 0 10px rgba(201, 162, 75, 0.3));
+    transform-origin: center;
+    transition: transform 0.5s ease, filter 0.5s ease;
+    animation: weatherIconBasePulse 4s ease-in-out infinite;
+  }
+
+  /* Condition-specific icon animations */
+  .weather-container.fx-clear .weather-primary-card .weather-icon-svg {
+    animation: weatherIconSunRotate 16s linear infinite;
+  }
+  .weather-container.fx-clouds .weather-primary-card .weather-icon-svg {
+    animation: weatherIconCloudSway 5s ease-in-out infinite;
+  }
+  .weather-container.fx-rain .weather-primary-card .weather-icon-svg {
+    animation: weatherIconRainBob 3s ease-in-out infinite;
+  }
+  .weather-container.fx-snow .weather-primary-card .weather-icon-svg {
+    animation: weatherIconSnowFloat 4s ease-in-out infinite;
+  }
+  .weather-container.fx-thunder .weather-primary-card .weather-icon-svg {
+    animation: weatherIconThunderPulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes weatherIconBasePulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(201, 162, 75, 0.3)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 0 16px rgba(232, 200, 114, 0.5)); }
+  }
+  @keyframes weatherIconSunRotate {
+    0% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 12px rgba(232, 200, 114, 0.4)); }
+    50% { transform: rotate(180deg) scale(1.08); filter: drop-shadow(0 0 18px rgba(232, 200, 114, 0.65)); }
+    100% { transform: rotate(360deg) scale(1); filter: drop-shadow(0 0 12px rgba(232, 200, 114, 0.4)); }
+  }
+  @keyframes weatherIconCloudSway {
+    0%, 100% { transform: translateX(-3px) scale(1); filter: drop-shadow(0 0 10px rgba(201, 162, 75, 0.3)); }
+    50% { transform: translateX(3px) scale(1.06); filter: drop-shadow(0 0 15px rgba(232, 200, 114, 0.45)); }
+  }
+  @keyframes weatherIconRainBob {
+    0%, 100% { transform: translateY(0px) rotate(-1deg); filter: drop-shadow(0 0 10px rgba(120, 160, 200, 0.3)); }
+    50% { transform: translateY(-4px) rotate(1deg) scale(1.04); filter: drop-shadow(0 0 16px rgba(120, 160, 200, 0.5)); }
+  }
+  @keyframes weatherIconSnowFloat {
+    0%, 100% { transform: translateY(0) rotate(-4deg) scale(1); filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.4)); }
+    50% { transform: translateY(-5px) rotate(4deg) scale(1.05); filter: drop-shadow(0 0 16px rgba(232, 200, 114, 0.5)); }
+  }
+  @keyframes weatherIconThunderPulse {
+    0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 10px rgba(201, 162, 75, 0.3)); }
+    45% { transform: scale(1.02) rotate(-2deg); filter: drop-shadow(0 0 12px rgba(232, 200, 114, 0.4)); }
+    50% { transform: scale(1.12) rotate(2deg); filter: drop-shadow(0 0 22px rgba(255, 220, 120, 0.9)); }
+    55% { transform: scale(1.02) rotate(-1deg); filter: drop-shadow(0 0 12px rgba(232, 200, 114, 0.4)); }
   }
   .weather-temp-num {
     font-family: var(--serif, 'Cinzel', serif);
@@ -4333,8 +4446,8 @@
             <input type="text" id="loginName" placeholder="t.ex. Anna Svensson" data-i18n-placeholder="placeholderName" style="width: 100%; padding: 10px; background: var(--bg-elevated); border: 1px solid var(--line-soft); border-radius: var(--radius); color: var(--text); font-size: 13px; box-sizing: border-box; outline: none; font-family: var(--sans);">
           </div>
           <div>
-            <label for="loginEmail" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;" data-i18n="labelEmail">E-postadress</label>
-            <input type="email" id="loginEmail" required data-i18n-placeholder="placeholderEmail" placeholder="namn@exempel.se" style="width: 100%; padding: 10px; background: var(--bg-elevated); border: 1px solid var(--line-soft); border-radius: var(--radius); color: var(--text); font-size: 13px; box-sizing: border-box; outline: none; font-family: var(--sans);">
+            <label for="loginEmail" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;" data-i18n="labelEmail">Användarnamn / E-postadress</label>
+            <input type="text" id="loginEmail" required data-i18n-placeholder="placeholderEmail" placeholder="admin eller e-post" style="width: 100%; padding: 10px; background: var(--bg-elevated); border: 1px solid var(--line-soft); border-radius: var(--radius); color: var(--text); font-size: 13px; box-sizing: border-box; outline: none; font-family: var(--sans);">
           </div>
           <div id="loginPasswordContainer">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -4477,7 +4590,6 @@
     </div>
 
     <div class="weather-container" id="weatherContainer">
-      <div class="weather-fx-overlay" id="weatherFxOverlay"></div>
       <div class="weather-main-grid" style="position: relative; z-index: 2;">
         <!-- Main Weather Summary Card -->
         <div class="weather-primary-card">
@@ -6103,8 +6215,8 @@
       socialSecTitle: 'Följ oss',
       loginModalTitle: 'Logga in på AEM Atelier',
       loginModalSubtitle: 'Logga in för att synkronisera dina tokens och sparade presets',
-      labelEmail: 'E-postadress',
-      placeholderEmail: 'Ange din e-postadress',
+      labelEmail: 'Användarnamn / E-postadress',
+      placeholderEmail: 'admin eller e-post',
       placeholderPassword: 'Lösenord',
       loginSuccessMsg: 'Välkommen tillbaka!',
       signupSwitchLink: 'Inget konto? Registrera dig här',
@@ -6487,8 +6599,8 @@
       socialSecTitle: 'Follow Us',
       loginModalTitle: 'Log In to AEM Atelier',
       loginModalSubtitle: 'Log in to sync your tokens and saved presets',
-      labelEmail: 'Email Address',
-      placeholderEmail: 'Enter your email address',
+      labelEmail: 'Username or Email Address',
+      placeholderEmail: 'admin or email',
       placeholderPassword: 'Password',
       loginSuccessMsg: 'Welcome back!',
       signupSwitchLink: 'No account? Sign up here',
@@ -6871,8 +6983,8 @@
       socialSecTitle: 'تابعنا',
       loginModalTitle: 'تسجيل الدخول إلى AEM Atelier',
       loginModalSubtitle: 'سجل الدخول لمزامنة الرموز والإعدادات المسبقة الخاصة بك',
-      labelEmail: 'البريد الإلكتروني',
-      placeholderEmail: 'أدخل بريدك الإلكتروني',
+      labelEmail: 'اسم المستخدم أو البريد الإلكتروني',
+      placeholderEmail: 'admin أو البريد الإلكتروني',
       placeholderPassword: 'كلمة المرور',
       loginSuccessMsg: 'مرحباً بعودتك!',
       signupSwitchLink: 'ليس لديك حساب؟ سجل هنا',
@@ -8739,6 +8851,15 @@
   // Prepopulated users DB (fallback / default mock account for backward-compatibility)
   var DEFAULT_USERS = [
     {
+      name: 'Admin',
+      email: 'admin',
+      username: 'admin',
+      password: 'admin',
+      dateJoined: '2026-01-01',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80',
+      tokenBalance: 100
+    },
+    {
       name: 'Anna Svensson',
       email: 'essgrombalia@gmail.com',
       password: 'password',
@@ -8749,14 +8870,37 @@
   ];
 
   function getUsersDB() {
+    var db = DEFAULT_USERS;
     try {
       var raw = localStorage.getItem(USERS_DB_KEY);
       if (raw) {
         var parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) db = parsed;
       }
     } catch(e) {}
-    return DEFAULT_USERS;
+
+    // Guarantee that admin account always exists with username 'admin' and password 'admin'
+    var adminIdx = db.findIndex(function(u) {
+      return (u.email && u.email.toLowerCase() === 'admin') || (u.username && u.username.toLowerCase() === 'admin');
+    });
+    if (adminIdx === -1) {
+      db.unshift({
+        name: 'Admin',
+        email: 'admin',
+        username: 'admin',
+        password: 'admin',
+        dateJoined: '2026-01-01',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80',
+        tokenBalance: 100
+      });
+      saveUsersDB(db);
+    } else {
+      if (db[adminIdx].password !== 'admin') {
+        db[adminIdx].password = 'admin';
+        saveUsersDB(db);
+      }
+    }
+    return db;
   }
 
   function saveUsersDB(db) {
@@ -8771,7 +8915,10 @@
       var email = localStorage.getItem(USER_EMAIL_KEY);
       if (isAuth && email) {
         var db = getUsersDB();
-        var found = db.find(function(u) { return u.email.toLowerCase() === email.toLowerCase(); });
+        var found = db.find(function(u) {
+          return (u.email && u.email.toLowerCase() === email.toLowerCase()) || 
+                 (u.username && u.username.toLowerCase() === email.toLowerCase()); 
+        });
         if (found) return found;
         
         // Lazy-creation for backwards-compatibility of prior logins
@@ -8798,7 +8945,10 @@
       var email = localStorage.getItem(USER_EMAIL_KEY);
       if (email) {
         var db = getUsersDB();
-        var index = db.findIndex(function(u) { return u.email.toLowerCase() === email.toLowerCase(); });
+        var index = db.findIndex(function(u) {
+          return (u.email && u.email.toLowerCase() === email.toLowerCase()) || 
+                 (u.username && u.username.toLowerCase() === email.toLowerCase()); 
+        });
         if (index !== -1) {
           db[index].tokenBalance = newCount;
           saveUsersDB(db);
@@ -9023,7 +9173,10 @@
 
         if (authMode === 'reset') {
           if (resetStep === 1) {
-            var foundUser = db.find(function(u) { return u.email.toLowerCase() === emailVal; });
+            var foundUser = db.find(function(u) { 
+              return (u.email && u.email.toLowerCase() === emailVal) || 
+                     (u.username && u.username.toLowerCase() === emailVal); 
+            });
             if (!foundUser) {
               alert(t('errEmailNotFound'));
               return;
@@ -9075,7 +9228,10 @@
               return;
             }
 
-            var foundUser = db.find(function(u) { return u.email.toLowerCase() === emailVal; });
+            var foundUser = db.find(function(u) { 
+              return (u.email && u.email.toLowerCase() === emailVal) || 
+                     (u.username && u.username.toLowerCase() === emailVal); 
+            });
             if (foundUser) {
               foundUser.password = newPasswordVal;
               saveUsersDB(db);
@@ -9172,7 +9328,10 @@
           alert(t('signupSuccessMsg'));
         } else {
           // Sign In Flow
-          var foundUser = db.find(function(u) { return u.email.toLowerCase() === emailVal; });
+          var foundUser = db.find(function(u) { 
+            return (u.email && u.email.toLowerCase() === emailVal) || 
+                   (u.username && u.username.toLowerCase() === emailVal); 
+          });
           
           if (foundUser) {
             if (foundUser.password !== passwordVal) {
@@ -10532,7 +10691,7 @@
     'dubai': { name: 'Dubai', country: 'AE', temp: 38, feels: 43, tempF: 100, humidity: 45, wind: 3.1, clouds: 0, vis: '10', mainCond: 'Clear', desc: 'strålande sol', icon: '01d', sunrise: '05:35', sunset: '19:10' }
   };
 
-  function updateWeatherFxClass(mainCond, desc) {
+  function updateWeatherFxClass(mainCond, desc, data) {
     var weatherBox = document.getElementById('weatherContainer');
     if (!weatherBox) return;
     weatherBox.classList.remove('fx-clear', 'fx-rain', 'fx-clouds', 'fx-snow', 'fx-thunder');
@@ -10551,6 +10710,25 @@
     } else {
       weatherBox.classList.add('fx-clear');
     }
+
+    // Dynamic temperature hue shift calculation (warmer amber vs cooler ice-gold)
+    var tempC = 18;
+    if (data) {
+      if (data.main && data.main.temp !== undefined) {
+        tempC = Math.round(data.main.temp);
+      } else if (data.temp !== undefined) {
+        tempC = Math.round(data.temp);
+      }
+    }
+    var hueShift = 0;
+    if (tempC > 18) {
+      // Hotter temp: shift towards warmer orange/amber hue
+      hueShift = Math.max(-25, Math.round((18 - tempC) * 1.2));
+    } else if (tempC < 18) {
+      // Colder temp: shift towards cooler ice-gold/cyan hue
+      hueShift = Math.min(45, Math.round((18 - tempC) * 1.5));
+    }
+    weatherBox.style.setProperty('--temp-hue-shift', hueShift + 'deg');
   }
 
   function getWeatherSvgIcon(iconCode, mainCond) {
@@ -10672,7 +10850,7 @@
     var lightingDescEl = document.getElementById('weatherLightingDesc');
     if (lightingDescEl) lightingDescEl.textContent = lightingInfo.recommendation;
 
-    updateWeatherFxClass(mainCond, condText);
+    updateWeatherFxClass(mainCond, condText, data);
   }
 
   function startWeatherAutoRefresh() {
